@@ -1,0 +1,15 @@
+id: radioteletype_baudot_decode_bb
+label: baudot decode bb
+category: '[Radioteletype]'
+templates:
+  imports: import radioteletype
+  make: radioteletype.baudot_decode_bb()
+inputs:
+- label: in
+  domain: stream
+  dtype: byte
+outputs:
+- label: out
+  domain: stream
+  dtype: byte
+file_format: 1

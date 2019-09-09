@@ -1,4 +1,4 @@
-# Copyright 2010-2011 Free Software Foundation, Inc.
+# Copyright 2010-2011,2019 Free Software Foundation, Inc.
 #
 # This file is part of GNU Radio
 #
@@ -35,7 +35,7 @@ include(GrPython)
 function(GR_SWIG_MAKE_DOCS output_file)
     if(ENABLE_DOXYGEN)
 
-        #setup the input files variable list, quote formated
+        #setup the input files variable list, quote formatted
         set(input_files)
         unset(INPUT_PATHS)
         foreach(input_path ${ARGN})
@@ -55,8 +55,16 @@ function(GR_SWIG_MAKE_DOCS output_file)
         make_directory(${OUTPUT_DIRECTORY})
 
         #generate the Doxyfile used by doxygen
+        #Find Doxyfile.swig_doc.in either in oot-modules directory or in gnuradio directory
+        find_path(DOXY_FILE_PATH names Doxyfile.swig_doc.in
+            PATHS
+             ${CMAKE_SOURCE_DIR}/docs/doxygen
+             ${CMAKE_INSTALL_PREFIX}/share/gnuradio/modtool/templates/gr-newmod/docs/doxygen
+        )
+        message(STATUS "Doxxyfile found in ${DOXY_FILE_PATH}")
         configure_file(
-            ${CMAKE_SOURCE_DIR}/docs/doxygen/Doxyfile.swig_doc.in
+#            ${CMAKE_SOURCE_DIR}/docs/doxygen/Doxyfile.swig_doc.in
+            ${DOXY_FILE_PATH}/Doxyfile.swig_doc.in
             ${OUTPUT_DIRECTORY}/Doxyfile
         @ONLY)
 
@@ -76,8 +84,9 @@ function(GR_SWIG_MAKE_DOCS output_file)
         add_custom_command(
             OUTPUT ${output_file}
             DEPENDS ${input_files} ${stamp-file} ${OUTPUT_DIRECTORY}/xml/index.xml
-            COMMAND ${PYTHON_EXECUTABLE} ${PYTHON_DASH_B}
-                ${CMAKE_SOURCE_DIR}/docs/doxygen/swig_doc.py
+            COMMAND ${PYTHON_EXECUTABLE} -B
+#                ${CMAKE_SOURCE_DIR}/docs/doxygen/swig_doc.py
+                ${DOXY_FILE_PATH}/swig_doc.py
                 ${OUTPUT_DIRECTORY}/xml
                 ${output_file}
             COMMENT "Generating python docstrings for ${name}"
@@ -105,82 +114,41 @@ endfunction(GR_SWIG_MAKE_DOCS)
 macro(GR_SWIG_MAKE name)
     set(ifiles ${ARGN})
 
-    # Shimming this in here to take care of a SWIG bug with handling
-    # vector<size_t> and vector<unsigned int> (on 32-bit machines) and
-    # vector<long unsigned int> (on 64-bit machines). Use this to test
-    # the size of size_t, then set SIZE_T_32 if it's a 32-bit machine
-    # or not if it's 64-bit. The logic in gr_type.i handles the rest.
-    INCLUDE(CheckTypeSize)
-    CHECK_TYPE_SIZE("size_t" SIZEOF_SIZE_T)
-    CHECK_TYPE_SIZE("unsigned int" SIZEOF_UINT)
-    if(${SIZEOF_SIZE_T} EQUAL ${SIZEOF_UINT})
-      list(APPEND GR_SWIG_FLAGS -DSIZE_T_32)
-    endif(${SIZEOF_SIZE_T} EQUAL ${SIZEOF_UINT})
-
     #do swig doc generation if specified
     if(GR_SWIG_DOC_FILE)
         set(GR_SWIG_DOCS_SOURCE_DEPS ${GR_SWIG_SOURCE_DEPS})
         list(APPEND GR_SWIG_DOCS_TARGET_DEPS ${GR_SWIG_TARGET_DEPS})
         GR_SWIG_MAKE_DOCS(${GR_SWIG_DOC_FILE} ${GR_SWIG_DOC_DIRS})
         add_custom_target(${name}_swig_doc DEPENDS ${GR_SWIG_DOC_FILE})
-        list(APPEND GR_SWIG_TARGET_DEPS ${name}_swig_doc ${GR_RUNTIME_SWIG_DOC_FILE})
+        list(APPEND GR_SWIG_TARGET_DEPS ${name}_swig_doc)
     endif()
 
-    #append additional include directories
-    find_package(PythonLibs 2)
-    list(APPEND GR_SWIG_INCLUDE_DIRS ${PYTHON_INCLUDE_PATH}) #deprecated name (now dirs)
-    list(APPEND GR_SWIG_INCLUDE_DIRS ${PYTHON_INCLUDE_DIRS})
-
     #prepend local swig directories
-    list(INSERT GR_SWIG_INCLUDE_DIRS 0 ${CMAKE_CURRENT_SOURCE_DIR})
-    list(INSERT GR_SWIG_INCLUDE_DIRS 0 ${CMAKE_CURRENT_BINARY_DIR})
+    list(INSERT GR_SWIG_INCLUDE_DIRS 0 "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>")
+    list(INSERT GR_SWIG_INCLUDE_DIRS 0 "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>")
 
-    #determine include dependencies for swig file
-    execute_process(
-        COMMAND ${PYTHON_EXECUTABLE}
-            ${CMAKE_BINARY_DIR}/get_swig_deps.py
-            "${ifiles}" "${GR_SWIG_INCLUDE_DIRS}"
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        OUTPUT_VARIABLE SWIG_MODULE_${name}_EXTRA_DEPS
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    )
-
-    #Create a dummy custom command that depends on other targets
-    include(GrMiscUtils)
-    GR_GEN_TARGET_DEPS(_${name}_swig_tag tag_deps ${GR_SWIG_TARGET_DEPS})
-    set(tag_file ${CMAKE_CURRENT_BINARY_DIR}/${name}.tag)
-    add_custom_command(
-        OUTPUT ${tag_file}
-        DEPENDS ${GR_SWIG_SOURCE_DEPS} ${tag_deps}
-        COMMAND ${CMAKE_COMMAND} -E touch ${tag_file}
-    )
-
-    #append the specified include directories
-    include_directories(${GR_SWIG_INCLUDE_DIRS})
-    list(APPEND SWIG_MODULE_${name}_EXTRA_DEPS ${tag_file})
+    if (PYTHON3)
+        set(py3 "-py3")
+    endif (PYTHON3)
 
     #setup the swig flags with flags and include directories
-    set(CMAKE_SWIG_FLAGS -fvirtual -modern -keyword -w511 -module ${name} ${GR_SWIG_FLAGS})
-    foreach(dir ${GR_SWIG_INCLUDE_DIRS})
-        list(APPEND CMAKE_SWIG_FLAGS "-I${dir}")
-    endforeach(dir)
+    set(CMAKE_SWIG_FLAGS -fvirtual -modern -keyword -w511 -w314 -relativeimport ${py3} -module ${name} ${GR_SWIG_FLAGS})
 
     #set the C++ property on the swig .i file so it builds
     set_source_files_properties(${ifiles} PROPERTIES CPLUSPLUS ON)
 
     #setup the actual swig library target to be built
     include(UseSWIG)
-    SWIG_ADD_MODULE(${name} python ${ifiles})
-    if(APPLE)
-      set(PYTHON_LINK_OPTIONS "-undefined dynamic_lookup")
-    else()
-      set(PYTHON_LINK_OPTIONS ${PYTHON_LIBRARIES})
-    endif(APPLE)
-    SWIG_LINK_LIBRARIES(${name} ${PYTHON_LINK_OPTIONS} ${GR_SWIG_LIBRARIES})
+    swig_add_library(${name} LANGUAGE python SOURCES ${ifiles})
     if(${name} STREQUAL "runtime_swig")
-        SET_TARGET_PROPERTIES(${SWIG_MODULE_runtime_swig_REAL_NAME} PROPERTIES DEFINE_SYMBOL "gnuradio_runtime_EXPORTS")
+      set_target_properties(runtime_swig PROPERTIES DEFINE_SYMBOL "gnuradio_runtime_EXPORTS")
     endif(${name} STREQUAL "runtime_swig")
-
+    set_target_properties(${name} PROPERTIES
+      SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE
+      )
+    target_include_directories(${name} PUBLIC ${GR_SWIG_INCLUDE_DIRS})
+    set_property(TARGET ${name} PROPERTY SWIG_DEPENDS ${GR_SWIG_TARGET_DEPS})
+    target_link_libraries(${name} Python::Python ${GR_SWIG_LIBRARIES})
 endmacro(GR_SWIG_MAKE)
 
 ########################################################################
@@ -188,69 +156,24 @@ endmacro(GR_SWIG_MAKE)
 # GR_SWIG_INSTALL(
 #   TARGETS target target target...
 #   [DESTINATION destination]
-#   [COMPONENT component]
 # )
 ########################################################################
 macro(GR_SWIG_INSTALL)
 
     include(CMakeParseArgumentsCopy)
-    CMAKE_PARSE_ARGUMENTS(GR_SWIG_INSTALL "" "DESTINATION;COMPONENT" "TARGETS" ${ARGN})
+    CMAKE_PARSE_ARGUMENTS(GR_SWIG_INSTALL "" "DESTINATION" "TARGETS" ${ARGN})
 
     foreach(name ${GR_SWIG_INSTALL_TARGETS})
-        install(TARGETS ${SWIG_MODULE_${name}_REAL_NAME}
-            DESTINATION ${GR_SWIG_INSTALL_DESTINATION}
-            COMPONENT ${GR_SWIG_INSTALL_COMPONENT}
+      install(TARGETS ${name}
+          DESTINATION ${GR_SWIG_INSTALL_DESTINATION}
         )
 
         include(GrPython)
         GR_PYTHON_INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}.py
-            DESTINATION ${GR_SWIG_INSTALL_DESTINATION}
-            COMPONENT ${GR_SWIG_INSTALL_COMPONENT}
-        )
-
-        GR_LIBTOOL(
-            TARGET ${SWIG_MODULE_${name}_REAL_NAME}
-            DESTINATION ${GR_SWIG_INSTALL_DESTINATION}
+          DESTINATION ${GR_SWIG_INSTALL_DESTINATION}
+          DEPENDS ${name}
         )
 
     endforeach(name)
 
 endmacro(GR_SWIG_INSTALL)
-
-########################################################################
-# Generate a python file that can determine swig dependencies.
-# Used by the make macro above to determine extra dependencies.
-# When you build C++, CMake figures out the header dependencies.
-# This code essentially performs that logic for swig includes.
-########################################################################
-file(WRITE ${CMAKE_BINARY_DIR}/get_swig_deps.py "
-
-import os, sys, re
-
-i_include_matcher = re.compile('%(include|import)\\s*[<|\"](.*)[>|\"]')
-h_include_matcher = re.compile('#(include)\\s*[<|\"](.*)[>|\"]')
-include_dirs = sys.argv[2].split(';')
-
-def get_swig_incs(file_path):
-    if file_path.endswith('.i'): matcher = i_include_matcher
-    else: matcher = h_include_matcher
-    file_contents = open(file_path, 'r').read()
-    return matcher.findall(file_contents, re.MULTILINE)
-
-def get_swig_deps(file_path, level):
-    deps = [file_path]
-    if level == 0: return deps
-    for keyword, inc_file in get_swig_incs(file_path):
-        for inc_dir in include_dirs:
-            inc_path = os.path.join(inc_dir, inc_file)
-            if not os.path.exists(inc_path): continue
-            deps.extend(get_swig_deps(inc_path, level-1))
-            break #found, we dont search in lower prio inc dirs
-    return deps
-
-if __name__ == '__main__':
-    ifiles = sys.argv[1].split(';')
-    deps = sum([get_swig_deps(ifile, 3) for ifile in ifiles], [])
-    #sys.stderr.write(';'.join(set(deps)) + '\\n\\n')
-    print(';'.join(set(deps)))
-")
