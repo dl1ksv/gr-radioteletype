@@ -166,7 +166,7 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
     samp_delay: '0'
-    taps: '[1.0/samp_per_sym+0 for i in range(32)]'
+    taps: '[1.0/samp_per_sym]*int(samp_per_sym)'
     type: ccf
   states:
     bus_sink: false
