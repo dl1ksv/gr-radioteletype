@@ -1,0 +1,53 @@
+id: variable_extended_rc_filter_taps
+label: Extended RC Filter Taps
+flags: [ show_id, python ]
+category: '[Radioteletype]'
+
+parameters:
+-   id: gain
+    label: Gain
+    dtype: float
+    default: '1.0'
+-   id: samp_rate
+    label: Sample Rate (Hz)
+    dtype: float
+    default: samp_rate
+-   id: sym_rate
+    label: Symbol Rate (Hz)
+    dtype: float
+    default: 45.45
+-   id: alpha
+    label: Excess BW
+    dtype: float
+    default: '0.35'
+-   id: ntaps
+    label: Num Taps
+    dtype: int
+    default: 11*int(${samp_rate}/${sym_rate})
+-   id: order
+    label: Filter order
+    dtype: int
+    default: 2
+
+value: ${ filters.extended_raised_cos(gain, samp_rate, sym_rate, alpha, ntaps) }
+
+templates:
+    imports: from radioteletype import filters
+    var_make: |-
+        self.${id} = ${id} = filters.extended_raised_cos(${gain},${samp_rate},\
+        ${sym_rate},${alpha},${ntaps},${order})
+        
+documentation: |-
+    Return W7AY extended raised cosine taps.
+
+    By adding raised cosine filters at multiples of the sample rate we can
+    obtain a Nyquist filter which approaches a boxcar. A boxcar filter is the
+    ideal matched filter for RTTY, however it has a wide frequency response.
+
+    By varying the order we are able to obtain filters between the boxcar
+    filter, which is optimal in the case of AWGN; and the raised cosine filter
+    which has the narrowest frequency response without ISI.
+
+    http://w7ay.net/site/Technical/Extended%20Nyquist%20Filters/index.html
+
+file_format: 1

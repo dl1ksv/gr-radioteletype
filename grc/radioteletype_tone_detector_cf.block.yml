@@ -7,19 +7,23 @@ category: '[Radioteletype]'
 parameters:
 -   id: decim
     label: Decimation
-    dtype: float
+    dtype: int
+    default: 1
 -   id: center_freq
     label: Center Frequency
     dtype: float
 -   id: sample_rate
     label: Sample Rate
     dtype: float
+    default: samp_rate
 -   id: baud_rate
     label: Baud Rate
     dtype: float
+    default: 45.45
 -   id: alpha
     label: Alpha
     dtype: float
+    default: 0.35
 
 inputs:
 -   domain: stream
@@ -30,7 +34,7 @@ outputs:
     dtype: float
 
 templates:
-    imports: from radioteletype.demodulators import tone_detector_cf
-    make: radioteletype.tone_detector_cf(${decim}, ${center_freq}, ${sample_rate},${baud_rate}, ${alpha})
+    imports: from radioteletype import demodulators
+    make: demodulators.tone_detector_cf(${decim}, ${center_freq}, ${sample_rate},${baud_rate}, ${alpha})
 
 file_format: 1

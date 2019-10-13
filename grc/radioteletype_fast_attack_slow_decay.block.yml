@@ -1,0 +1,30 @@
+id: fast_attack_slow_decay
+label: Fast attack slow decay 
+flags: [ show_id, python ]
+category: '[Radioteletype]'
+
+parameters:
+-   id: attack
+    label: Attack factor
+    dtype: float
+    default: 0.7
+-   id: decay
+    label: Decay factor
+    dtype: float
+    default: 0.01
+
+inputs:
+-   domain: stream
+    dtype: float
+    multiplicity: 2
+
+outputs:
+-   domain: stream
+    dtype: float
+    multiplicity: 2
+
+templates:
+    imports: from radioteletype import fast_attack_slow_decay
+    make: fast_attack_slow_decay.fast_attack_slow_decay(${attack}, ${decay})
+
+file_format: 1

@@ -17,7 +17,6 @@
 # along with GNU Radio; see the file COPYING.  If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
-
 install(FILES
     radioteletype_rms_agc_cc.block.yml
     radioteletype_psk31_coherent_demodulator_cc.block.yml
@@ -32,5 +31,8 @@ install(FILES
     radioteletype_tone_detector_cf.block.yml
     radioteletype_varicode_decode_bb.block.yml
     radioteletype_varicode_encode_bb.block.yml
-    radioteletype_baudot_encode_bb.block.yml DESTINATION share/gnuradio/grc/blocks
+    radioteletype_baudot_encode_bb.block.yml
+    radioteletype_fast_attack_slow_decay.block.yml
+    variable_extended_rc_filter_taps.block.yml
+    DESTINATION share/gnuradio/grc/blocks
 )

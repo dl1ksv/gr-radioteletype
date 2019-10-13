@@ -67,9 +67,9 @@ namespace gr {
       ninput_items_required[0] = required_samples;
     }
 
-    unsigned char *async_word_extractor_bb_impl::eat_bit(bool sample, unsigned char *out)
+    unsigned char *async_word_extractor_bb_impl::eat_bit(unsigned char sample, unsigned char *out)
     {
-      if (bits_eaten >= bits_per_word and sample)
+      if (bits_eaten >= bits_per_word and (sample == 1) )
       {
         *out++ = current_word;
         waiting_for_start = true;
@@ -78,7 +78,7 @@ namespace gr {
       {
         // shift the bit in at the most significant position
         current_word >>= 1;
-        if (sample)
+        if (sample == 1)
         {
           current_word += (1 << (bits_per_word-1));
         }
@@ -89,7 +89,7 @@ namespace gr {
       return out;
     }
 
-    unsigned char *async_word_extractor_bb_impl::eat_sample(bool sample, unsigned char *out)
+    unsigned char *async_word_extractor_bb_impl::eat_sample(unsigned char sample, unsigned char *out)
     {
       if (waiting_for_start)
       {
@@ -121,8 +121,6 @@ namespace gr {
 
       const unsigned char *const in_start = in;
       const unsigned char *const out_start = out;
-
-      unsigned char byte;
 
       while( (out - out_start < noutput_items) &&
              (in - in_start < ninput_items[0]))

@@ -32,9 +32,11 @@ endif()
 GR_PYTHON_INSTALL(
     FILES
     __init__.py
-    filters.py 
+    filters.py
     modulators.py
-    demodulators.py DESTINATION ${GR_PYTHON_DIR}/radioteletype
+    demodulators.py
+    fast_attack_slow_decay.py
+    DESTINATION ${GR_PYTHON_DIR}/radioteletype
 )
 
 ########################################################################
